@@ -1,2 +1,3 @@
-# Econometrix-
-Test, regressions and time-series analysis
+# econometrix
+
+I store my code of tests, regressions and time-series analyses with R here.
