@@ -1,0 +1,107 @@
+#task 1: statistical description
+
+library(ggplot2)
+library(reshape2)
+
+
+#identify negative and positive portfolio
+data_task_1$category[data_task_1$nominal<0] <- "negative"   
+data_task_1$category[data_task_1$nominal>0] <- "positive"   
+
+#change the "currency" and "category" into factor format
+data_task_1$currency <- as.factor(data_task_1$currency)
+data_task_1$category <- as.factor(data_task_1$category)     
+
+#1.1 visualization: boxplot of the portfolio sorted by currency and the sign of cash flow
+p1 <- ggplot(data_task_1,aes(x=currency,y=nominal))+        
+	geom_boxplot()+                                     
+	geom_jitter(shape=1,position = position_jitter(0.3),aes(color=category))+             
+	stat_summary(fun.y = mean, geom = "point",shape=17,size=2)+                           
+	scale_y_continuous(labels = scales::comma,breaks=seq(-50000000,50000000,10000000))+   
+	theme_light()+                                                                        
+	ggtitle(label="Boxplot of the Portfolio",                                             
+		subtitle="Sorted by Currency and the Sign of Cash Flow")+
+	theme(axis.title.x = element_blank(),                                                 
+		axis.title.y = element_blank(),
+		legend.position="bottom",
+		plot.title=element_text(size=11,face="bold",hjust=0),
+		plot.subtitle=element_text(size=9,face="italic",hjust=0))
+
+#print the graph, saved size: 800*600
+p1   
+
+#1.2 visualization: boxplot of the portfolio sorted by currency and the tenor
+p2 <- ggplot(data_task_1,aes(x=currency,y=nominal))+   
+	geom_boxplot()+
+	geom_jitter(shape=1,position = position_jitter(0.3),aes(color=maturity))+
+	stat_summary(fun.y = mean, geom = "point",shape=17,size=2)+
+	scale_y_continuous(labels = scales::comma,breaks=seq(-50000000,50000000,10000000))+
+	theme_light()+
+	ggtitle(label="Boxplot of the Portfolio",
+		subtitle="Sorted by Currency and Tenor")+
+	theme(axis.title.x = element_blank(),
+		axis.title.y = element_blank(),
+		legend.position="bottom",
+		plot.title=element_text(size=11,face="bold",hjust=0),
+		plot.subtitle=element_text(size=9,face="italic",hjust=0))
+
+#print the graph, saved size: 800*600
+p2   
+
+#1.3 visualization: lineplot of the portfolio sorted by currency in acending order
+#seperate the portfolio in different currency and sort both in ascending order
+EUR <- subset(data_task_1,currency=="EUR",select = c(item,nominal,maturity,category))
+USD <- subset(data_task_1,currency=="USD",select = c(item,nominal,maturity,category))
+eur_sort <- sort(EUR$nominal)
+usd_sort <- sort(USD$nominal)
+
+#plot the portfolio as a line graph sorted by currency in ascending order
+plot(eur_sort,type="p", col="blue", xlab="Ascending Order", ylab="Nominal",yaxt="n",
+	main="Portfolio Sorted by Ascending Order")
+lines(usd_sort,type="p", col="red")
+legend(1, 48000000, legend=c("USD", "EUR"),
+       col=c("red", "blue"), pch=c(1,1), cex=0.8)
+ytick<-seq(-50000000,50000000,by=10000000)
+axis(2,at=ytick,labels = format(ytick,scientific = FALSE))
+grid()
+#saved size: 800*600
+
+
+#1.4 visualization: barplot of the netted value of the portfolio
+#build vectors for illustrating the netted value
+sum_eur <- sum(EUR$nominal)
+sum_usd <- sum(USD$nominal)
+
+sum_eur_posi <- sum(EUR$nominal[EUR$nominal>0])
+sum_eur_nega <- sum(EUR$nominal[EUR$nominal<0])
+sum_usd_posi <- sum(USD$nominal[USD$nominal>0])
+sum_usd_nega <- sum(USD$nominal[USD$nominal<0])
+
+#build a data frame and change the format from "wide" to "long"
+id <- c("Sum of Positives","Sum of Negatives","Net Amount")
+eur_item <- c(sum_eur_posi,sum_eur_nega,sum_eur)
+usd_item <- c(sum_usd_posi,sum_usd_nega,sum_usd)
+df <- data.frame(id,eur_item,usd_item)
+df
+
+netdata <- melt(df,id=c("id"))
+
+netdata$id <- as.factor(netdata$id)
+netdata$variable <- as.factor(netdata$variable)
+
+#plot the netted value of the portfolio
+p3 <- ggplot(netdata,aes(x=id,y=value,fill=variable,label=value))+
+	geom_bar(stat = "identity",position=position_dodge())+
+	scale_y_continuous(labels = scales::comma,breaks=seq(-1750000000,1750000000,250000000))+
+	scale_fill_discrete(name = "Currency", labels = c("EUR", "USD"))+
+	theme_light()+
+	ggtitle(label="Netted Values of Portfolio Sorted by Currency")+
+	theme(axis.title.x = element_blank(),
+		axis.title.y = element_blank(),
+		legend.position="bottom",
+		plot.title=element_text(size=11,face="bold",hjust=0))
+
+#print the graph, saved size: 800*600
+p3
+
+

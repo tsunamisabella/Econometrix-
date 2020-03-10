@@ -1,0 +1,128 @@
+#task 2: analyse fair values over time
+
+#modify the variable format
+data_task_2$currency <- as.factor(data_task_2$currency)
+data_task_2$interest_currency <- as.factor(data_task_2$interest_currency)
+
+#identify the possible expired portfolio against the analysis term 
+data_task_2$tenor <- ifelse(data_task_2$maturity >= data_task_2$period, "valid", "expired")
+data_task_2$tenor <- as.factor(data_task_2$tenor)
+
+#2.1 calculate the fair value 
+#calculate the fair value of each instrument,let fair value = 0 once it is expired
+data_task_2$fv <- ifelse(data_task_2$tenor=="valid", data_task_2$nominal*(1/(exp(data_task_2$interest_rate*(data_task_2$maturity-data_task_2$period)))),0)
+
+#data cleaning, seperate EUR and USD fortfolio
+eur_set <- subset(data_task_2, currency=="EUR" & interest_currency=="EUR", select = c(item,nominal,maturity,period,interest_rate,tenor,fv,currency))
+usd_set <- subset(data_task_2, currency=="USD" & interest_currency=="USD", select = c(item,nominal,maturity,period,interest_rate,tenor,fv,currency))
+instrument <- rbind(eur_set,usd_set)
+
+
+#calculate the sum of portfolio overtime sorted by currency
+eur_sum <- aggregate(eur_set$fv,by=list(period=eur_set$period),FUN=sum)
+usd_sum <- aggregate(usd_set$fv,by=list(period=usd_set$period),FUN=sum)
+
+#set up a table contain the sum of portfolio overtime with both currency for later plotting
+list01 <- 1:10
+curr <- rep("EUR",length(list01))
+eur_sum <- cbind(eur_sum,curr)
+curr <- rep("USD",length(list01))
+usd_sum <- cbind(usd_sum,curr)
+sum <- rbind(usd_sum,eur_sum)
+
+usd_int <- c(0.28,0.13,0.02,-0.19,-0.38,-0.52,-0.69,-0.8,-0.93,-1.11)
+eur_int <- c(0.53,0.55,0.7,0.74,0.88,0.15,1.13,1.35,1.57,1.74)
+
+eur_sum <- cbind(eur_sum,eur_int)
+usd_sum <- cbind(usd_sum,usd_int)
+
+
+#2.2 plot the distribution of the fair value overtime of each instrument
+#plot distribution of both USD and EUR portfolio in the same graph
+plot(x=usd_set$period,y=usd_set$fv,type="p", col="blue", xlab="Period", ylab="Fair Value",yaxt="n",
+	main="Distribution of the Fair Value Overtime")
+lines(x=eur_set$period,y=eur_set$fv,type="p", col="red")
+legend(1, 27000000000, legend=c("USD", "EUR"),
+       col=c("blue", "red"), pch=c(1,1), cex=0.8)
+ytick <- seq(-30000000000,30000000000,by=10000000000)
+axis(2,at=ytick,labels = format(ytick,scientific = FALSE))
+grid()
+
+#plot the distribution of USD portfolio
+plot(x=usd_set$period,y=usd_set$fv,type="p", col="blue", xlab="Period", ylab="Fair Value",yaxt="n",
+	main="Distribution of the Fair Value Overtime: USD Portfolio")
+ytick <- seq(-30000000000,30000000000,by=10000000000)
+axis(2,at=ytick,labels = format(ytick,scientific = FALSE))
+grid()
+
+
+#plot the distribution of EUR portfolio
+plot(x=eur_set$period,y=eur_set$fv,type="p", col="red", xlab="Period", ylab="Fair Value",yaxt="n",
+	main="Distribution of the Fair Value Overtime: EUR Portfolio")
+ytick <- seq(-50000000,50000000,by=10000000)
+axis(2,at=ytick,labels = format(ytick,scientific = FALSE))
+grid()
+
+
+#2.3 plot the fair value overtime of the whole portfolio
+#plot both the USD and EUR portfolio in the same graph
+p_both <- ggplot(sum,aes(x=period,y=x,fill=curr,label=x))+
+	geom_bar(stat = "identity",position=position_dodge())+
+	scale_y_continuous(labels = scales::comma)+
+	scale_x_continuous(breaks=seq(0,10,1))+
+	scale_fill_discrete(name = "Currency", labels = c("USD", "EUR"))+
+	theme_light()+
+	ggtitle(label="Fair Value Overtime of Both USD and EUR Porfolio")+
+	theme(axis.title.x = element_blank(),
+		axis.title.y = element_blank(),
+		legend.position="bottom",
+		plot.title=element_text(size=11,face="bold",hjust=0))
+p_both
+
+#as EUR fair value is far less than USD, plot EUR fair value overtime seperately
+p_eur <- ggplot(eur_sum,aes(x=period,y=x,fill=curr,label=x))+
+	geom_bar(stat = "identity",position=position_dodge())+
+	scale_y_continuous(labels = scales::comma,breaks=seq(-100000000,200000000,50000000))+
+	scale_x_continuous(breaks=seq(0,10,1))+
+	theme_light()+
+	ggtitle(label="Fair Value Overtime of EUR Porfolio")+
+	theme(axis.title.x = element_blank(),
+		axis.title.y = element_blank(),
+		legend.position = "none",
+		plot.title=element_text(size=11,face="bold",hjust=0))
+p_eur
+
+
+#2.4 Explain the driven factor of the fair value
+ 
+#simulate: nominal=3100000, maturity=6 years
+term_3 <- function(x) 3100000*(1/exp(x*3))
+term_4 <- function(x) 3100000*(1/exp(x*2))
+term_5 <- function(x) 3100000*(1/exp(x*1))
+
+#plot funcions
+g <- ggplot(data.frame(x=c(-0.75,0.5)),aes(x))+
+	stat_function(fun = term_3,geom = "path",aes(color="Year 3"),size=1)+
+	stat_function(fun = term_4,geom = "path",aes(color="Year 4"),size=1)+
+	stat_function(fun = term_5,geom = "path",aes(color="Year 5"),size=1)+
+	xlab(label = "Interest Rate")+
+	ylab(label = "Fair Value")+
+	scale_y_continuous(labels = scales::comma,breaks=seq(0,30000000,5000000))+
+	scale_x_continuous(breaks=seq(-0.75,0.5,0.25))+
+	scale_colour_manual("Period: ",values = c("red","green","blue") )+
+	theme_light()+
+	ggtitle(label="Example of How Interest Rate Impact on the Fair Value",
+		subtitle="Given: Nominal=3,100,000 $, Maturity=6 years")+
+	theme(legend.position="bottom",
+		plot.title=element_text(size=11,face="bold",hjust=0),
+		plot.subtitle=element_text(size=9,face="italic",hjust=0))+
+
+	annotate("segment",x=-0.75,xend=0.5,y=3100000,yend=3100000,colour="orange",size=0.05)+
+	annotate(geom="text",x=0.125,y=12500000,label="Interest rate is negatively correlated with fair value
+		\n Fair Value < Nonimal, when interest rate >0
+		\n F(x)= Nominal * e^[x*(Year-6)]",
+		size=5,colour="red")+
+	annotate(geom="text",x=0.125,y=5000000,label="Nominal = 3,100,000 $",
+		size=4,colour="orange")
+#print function plot
+g

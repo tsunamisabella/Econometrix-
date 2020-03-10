@@ -1,0 +1,74 @@
+#task 3: forcast
+
+#analysis packages 
+library(forecast)
+library(urca)
+library(zoo)
+library(tseries)
+library(vars)
+library(car)
+
+
+#set up time series
+r_usd <- ts(marketdata$interest_USD,frequency = 1,start = c(2000,1))
+r_eur <- ts(marketdata$interest_EUR,frequency = 1,start = c(2000,1))
+
+
+#select model ARIMA(p,d,q)
+model_usd <- auto.arima(r_usd, ic="aic",d=0,max.q=0, seasonal=FALSE)
+model_eur <- auto.arima(r_eur, ic="aic",d=0,max.q=0, seasonal=FALSE)
+
+model_usd  #AIC select ARIMA(0,0,0)
+model_eur  #BIC select ARIMA(1,0,0)
+
+#result USD
+#Series: r_usd 
+#ARIMA(0,0,0) with non-zero mean 
+#Coefficients:
+#         mean
+#      -0.4190
+#s.e.   0.1416
+#sigma^2 estimated as 0.2227:  log likelihood=-6.15
+#AIC=16.3   AICc=18.02   BIC=16.91
+
+
+#Series: r_eur 
+#ARIMA(1,0,0) with non-zero mean 
+#Coefficients:
+#         ar1    mean
+#      0.6120  0.9822
+#s.e.  0.2783  0.2831
+#sigma^2 estimated as 0.1938:  log likelihood=-5.1
+#AIC=16.21   AICc=20.21   BIC=17.12
+
+
+#forecast for the forward 3 years
+#forecast for USD interest rate
+h = 3     # forecast horizon
+f_usd = forecast(model_usd, h=h, level=0.95) #level=95% confidence level
+print(f_usd)
+plot(f_usd, main="Forcast from ARIMA(0,0,0) with Non-Zero Mean, USD Interest Rate", xlab="Simulated Year", ylab="Interest Rate")
+lines(r_usd,lty=2) # depict the realised series in dashed lines
+grid()
+
+#result
+# Point Forecast    Lo 95     Hi 95
+#2010         -0.419 -1.34388 0.5058801
+#2011         -0.419 -1.34388 0.5058801
+#2012         -0.419 -1.34388 0.5058801
+
+
+#forcast for EUR interest rate
+f_eur = forecast(model_eur, h=h, level=0.95)
+print(f_eur)
+plot(f_eur, main="Forcast from ARIMA(1,0,0) with Non-Zero Mean, EUR Interest Rate", xlab="Simulated Year", ylab="Interest Rate")
+lines(r_eur,lty=2) # depict the realised series in dashed lines
+grid()
+
+#parameter
+# Point Forecast     Lo 95    Hi 95
+#2010       1.445991 0.5831593 2.308822
+#2011       1.266051 0.2544508 2.277651
+#2012       1.155925 0.0939519 2.217897
+
+
